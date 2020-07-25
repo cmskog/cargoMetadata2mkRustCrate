@@ -1,0 +1,82 @@
+cat <<-__END__
+cat <<__CREATE_NIX_START__
+{ pkgs ? import <nixpkgs> {} }:
+	with pkgs;
+		rec {
+__CREATE_NIX_START__
+
+$(jq -r '
+def parsepkgid:
+	capture("^(?<name>.*) (?<version>.*) \\((?<source>.*)\\)$");
+def pkgid2recattr:
+	gsub("[^a-zA-Z0-9]"; "-");
+
+# The "resolve" part is the "versioned tree" of packages that is needed to build a project
+#
+.resolve |
+
+(reduce (.nodes[] | .deps[]) as $pkg
+	({};
+	.[$pkg["pkg"]]+=([$pkg["dep_kinds"]| .[] | .["target"]])
+	)
+	| map_values(unique)
+	| map_values(map(if . == null then "required" else . end))) as $depcfgs |
+
+.nodes |
+sort_by(.id) |
+.[] |
+del(.dependencies) |
+. + { flatdeps: [ .deps[] | { pkg, name, pkgidrecattr: .pkg | pkgid2recattr } + .dep_kinds[] ] } |
+del(.deps) |
+. + { dependencies: .flatdeps | map(select(.kind == null)) } |
+. + { builddependencies: .flatdeps | map(select(.kind == "build")) } |
+. + { devdependencies: .flatdeps | map(select(.kind == "dev")) } |
+del(.flatdeps) |
+. + (.id | parsepkgid) |
+. + (.source | capture("^path\\+file\\://(?<path>.*)$") // { path: null }) |
+
+
+# The template for the mkRustCrate expression
+#
+"cat <<__CREATE_NIX_CRATE__
+# Package with pkgid: \"\(.id)\"
+# \(if $depcfgs[.id]? == null
+then
+	"Root package"
+else
+	"A dependency applicable for the following cfgs:\n# \($depcfgs[.id] | map("\"" + . + "\"") | join(",\n# "))"
+end)
+\( .id | pkgid2recattr ) = mkRustCrate rec {
+    name = \"\( .name )\";
+    version = \"\( .version )\";
+    src = \(if .source == "registry+https://github.com/rust-lang/crates.io-index"
+            then "fetchFromCratesIo {
+      inherit name version;
+      sha256 = \"$(nix-prefetch-url --type sha256 --unpack --name  '\''\(.name + "-" + .version + ".crate")'\'' '\''https://crates.io/api/v1/crates/\(.name)/\(.version)/download#crate.tar.gz'\'' 2>/dev/null)\";
+    };"
+            elif .path != null
+	    then "\(.path);"
+	    else error("Unsupported source: \"\(.source)\"")
+	    end)
+    dependencies = [
+\( .dependencies | map( "\"" + .name + "\"", .pkgidrecattr ) | join("\n") )
+    ];
+    buildDependencies = [
+\( .builddependencies | map( "\"" + .name + "\"", .pkgidrecattr ) | join("\n") )
+    ];
+    devDependencies = [
+\( .devdependencies | map( "\"" + .name + "\"", .pkgidrecattr ) | join("\n") )
+    ];
+    features = [
+\( .features // [] | map("\"" + . + "\"") | join("\n") )
+    ];
+    noDefaultFeatures = true;
+  };
+__CREATE_NIX_CRATE__
+"
+')
+
+cat <<__CREATE_NIX_END__
+		}
+__CREATE_NIX_END__
+__END__
