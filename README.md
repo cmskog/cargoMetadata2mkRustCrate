@@ -88,5 +88,5 @@ import <nixpkgs> {
 
 You might also need to add buildInputs to some crates that references external
 libraries(e.g. the `openssl-sys` crate needs a line
-`buildInputs = [ openssl_1_0_2 pkgconfig ];` line added to its mkRustCrate
+`buildInputs = [ openssl pkgconfig ];` line added to its mkRustCrate
 definition).
