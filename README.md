@@ -40,7 +40,7 @@ import <nixpkgs> {
 ```
 Then run `nix-build`:
 
-`nix-build some-dir-with-a-crate.nix --arg pkgs 'import ./overlay.nix'`
+`nix-build some-dir-with-a-crate --arg pkgs 'import ./overlay.nix'`
 
 If you want be fancy and run the expression against the Rust nightly at some specific date, you can use the very cool "rust-overlay.nix"
 from the "nixpkgs-mozilla" repository.
