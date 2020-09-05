@@ -1,37 +1,39 @@
 # cargoMetadata2mkRustCrate
 
 ## Description
-jq and shell script for converting output from a "cargo metadata" invocation to a Nix script for building with the mkRustCrate system.
-For now, it is a crude two pass jq output into shell script implementation.
+A system for converting output from a "cargo metadata" invocation(on stdin) to a Nix script(on stdout) for building a crate with the mkRustCrate system.
 
 ## Example run
 1. `$ cd some-dir-with-a-crate`
-2. `$ cargo metadata --format-version 1 | bash cargoMetadata2mkRustCrate > ../some-build-directory/some-dir-with-a-crate.nix.sh`
+2. `$ cargo metadata --format-version 1 | cargoMetadata2mkRustCrate > default.nix`
     * `--format-version 1` stops whining about compatibility problems
-3. `$ cd ../some-build-directory`
-    * Do not run the actual nix-build process in the same directory as the crate
-4. `$ bash ./some-dir-with-a-crate.nix.sh > some-dir-with-a-crate.nix`
-5. `$ nix-build some-dir-with-a-crate.nix`
+3. `$ cd ..`
+    * Do not run the actual nix-build process in the same directory as the crate you are hacking on. Any changes to the crate directory(e.g. result* files from a nix-build) will make the crate eligible for rebuild).
+4. `$ nix-build some-dir-with-a-crate`
+    * At least in theory(the packages is not in nixpkgs, so you will need prepare an overlay, and use this with a `--arg` argument, as described later).
 
 ## Implementation
-The first pass creates a shell script that when run, downloads with `nix-prefetch-url`(into the Nix store) and fills in the sha256sums for the dependent crates from crates.io in the Nix expression.
-The end result is a Nix expression that enumerates all "root crates" and their dependencies, and all the needed features set on all crates.
-This can then be used build all the crates and dependent crates with `nix-build`.
+The first pass(jq) creates a shell script that when run(second pass),
+downloads with `nix-prefetch-url`(into the Nix store) and fills in the
+sha256sums for the dependent crates from crates.io in the Nix expression.
+The end result is a Nix expression that enumerates all "root crates" and
+their dependencies, and all the needed features set on all crates. This can
+then be used build all the crates and dependent crates with `nix-build`.
 
 ## Deficiencies
-For simple cases, that is.
-
-Currently, no issues dealing with platform specific builds are handled(those under `[target.'cfg(windows)'.dependencies]` headings in the Cargo.toml).
-
-In addition, in order to make the resultant Nix expression assume as little as possible about the packages given to the expression, it starts with the usual
+In order to make the resultant Nix expression assume as little as possible about the packages given to the expression, it starts with the usual
 `{ pkgs ? import <nixpkgs> {} }:`.
 However, the needed packages is not in nixpkgs yet, so you have to prepare an overlay for `nix-build`.
-E.g. to use the rust in nixpkgs save an overlay in some file(overlay.nix):
+To use the rust in nixpkgs, save an overlay in some file(e.g. `overlay.nix`):
 ```
 import <nixpkgs> {
 	overlays = [
 
+	# mkRustCrate and friends
 	(import (builtins.fetchTarball https://github.com/cmskog/mkRustCrate/archive/master.tar.gz))
+
+	# cargoMetadata2mkRustCrate and friends(in particular rustcNixCfg that is referenced in Nix expressions created by cargoMetadata2mkRustCrate)
+	(import (builtins.fetchTarball https://github.com/cmskog/cargoMetadata2mkRustCrate/archive/master.tar.gz))
 
       ];
 }
@@ -49,6 +51,7 @@ E.g. you absolutely want to use the nightly of 2020-04-22:
 import <nixpkgs> {
 	overlays = [
 
+	# Import the Rust overlay from Mozilla's nixpkgs-mozilla repository
 	(import
 		(builtins.fetchTarball
 			https://github.com/mozilla/nixpkgs-mozilla/archive/efda5b357451dbb0431f983cca679ae3cd9b9829.tar.gz
@@ -56,6 +59,7 @@ import <nixpkgs> {
 		)
 	)
 
+	# Pick the Rust version you are interested in
         (self: super:
 	        let
 		        rustChannel = super.rustChannelOf {
@@ -72,8 +76,17 @@ import <nixpkgs> {
 			}
 	)
 
+	# mkRustCrate and friends
 	(import (builtins.fetchTarball https://github.com/cmskog/mkRustCrate/archive/master.tar.gz))
+
+	# cargoMetadata2mkRustCrate and friends(in particular rustcNixCfg that is referenced in Nix expressions created by cargoMetadata2mkRustCrate)
+	(import (builtins.fetchTarball https://github.com/cmskog/cargoMetadata2mkRustCrate/archive/master.tar.gz))
 
 	];
 }
 ```
+
+You might also need to add buildInputs to some crates that references external
+libraries(e.g. the `openssl-sys` crate needs a line
+`buildInputs = [ openssl_1_0_2 pkgconfig ];` line added to its mkRustCrate
+definition).

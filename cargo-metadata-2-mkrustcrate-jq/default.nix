@@ -1,5 +1,7 @@
-cat <<-__END__
-$(jq -r '
+{ cargoPlatformToNix, nix, writeText }:
+writeText
+"cargoMetadata2mkRustcrateJQ"
+''
 #
 # Start of jq script
 #
@@ -39,7 +41,7 @@ def print_package(print_type; $cfgmapping):
 	    src = \(if .source == "registry+https://github.com/rust-lang/crates.io-index"
 	            then "fetchFromCratesIo {
 	      inherit name version;
-	      sha256 = \"$(nix-prefetch-url --type sha256 --unpack --name  '\''\(.name + "-" + .version + ".crate")'\'' '\''https://crates.io/api/v1/crates/\(.name)/\(.version)/download#crate.tar.gz'\'' 2>/dev/null)\";
+	      sha256 = \"$(${nix}/bin/nix-prefetch-url --type sha256 --unpack --name  '\(.name + "-" + .version + ".crate")' 'https://crates.io/api/v1/crates/\(.name)/\(.version)/download#crate.tar.gz' 2>/dev/null)\";
 	    };"
 	            elif .path != null
 		    then "\(.path);"
@@ -65,7 +67,7 @@ def parse_cfg_expr:
 	then
 		"true"
 	else
-		"$(cargo-platform-to-nix '\''\(.)'\'')"
+		"$(${cargoPlatformToNix}/bin/cargo-platform-to-nix '\(.)')"
 	end;
 
 def print_cfg_expr:
@@ -147,12 +149,15 @@ __CREATE_NIX_START__",
 
 # START OF DEPENDENCIES
   let
+	_cfg = (import rustcNixCfg);
 	_target = _cfg.target_arch
-		+ \"-\" + _cfg.target_vendor
-		+ \"-\" + _cfg.target_arch
+		+ \"-\"
+		+ _cfg.target_vendor
+		+ \"-\"
+		+ _cfg.target_os
 		+ (if _cfg.target_env == \"\"
 			then \"\"
-			else \"-\" + _cfg.target_env);
+			else (\"-\" + _cfg.target_env));
 
 __CREATE_NIX_START_OF_DEPENDENCIES__",
 
@@ -211,5 +216,4 @@ __CREATE_NIX_END__"
 #
 # End of jq script
 #
-')
-__END__
+''
