@@ -1,6 +1,6 @@
 { cargoPlatformToNix, nix, writeText }:
 writeText
-"cargoMetadata2mkRustcrateJQ"
+"cargoMetadata2mkRustCrateJQ"
 ''
 #
 # Start of jq script

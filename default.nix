@@ -8,11 +8,11 @@
 			./cargo-platform-to-nix
 			{});
 
-		cargoMetadata2mkRustcrateJQ = (super.callPackage
+		cargoMetadata2mkRustCrateJQ = (super.callPackage
 			./cargo-metadata-2-mkrustcrate-jq
 			{});
 
-		cargoMetadata2mkRustcrate = (super.callPackage
+		cargoMetadata2mkRustCrate = (super.callPackage
 			./cargo-metadata-2-mkrustcrate
 			{});
 	}

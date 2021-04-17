@@ -1,6 +1,6 @@
-{ bash, cargoMetadata2mkRustcrateJQ, jq, writeShellScriptBin }:
+{ bash, cargoMetadata2mkRustCrateJQ, jq, writeShellScriptBin }:
 	writeShellScriptBin
 		"cargoMetadata2mkRustCrate"
 		''
-		${jq}/bin/jq -r -f ${cargoMetadata2mkRustcrateJQ} | ${bash}/bin/bash
+		${jq}/bin/jq -r -f ${cargoMetadata2mkRustCrateJQ} | ${bash}/bin/bash
 		''
