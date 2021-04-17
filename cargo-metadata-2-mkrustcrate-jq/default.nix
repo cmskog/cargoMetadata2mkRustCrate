@@ -45,7 +45,7 @@ def print_package(print_type; $cfgmapping):
 	    };"
 	            elif .path != null
 		    then "\(.path);"
-		    else error("Unsupported source: \"\(.source)\"")
+		    else "\"Unsupported source: \(.source)\""
 		    end)
 	    dependencies = [
 	\( .dependencies | map_dependency($cfgmapping) )
