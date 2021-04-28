@@ -1,4 +1,6 @@
-{ cargoPlatformToNix, nix, writeText }:
+{ cargoPlatformToNix,
+  nix,
+  writeText }:
 writeText
 "cargoMetadata2mkRustCrateJQ"
 ''
@@ -32,7 +34,8 @@ def map_dependency($cfgmapping):
 	| join("\n");
 
 def print_package(print_type; $cfgmapping):
-	"cat <<__CREATE_NIX_CRATE__
+  "get_crateurl '\(.source)' '\(.name)' '\(.version)' '\($cratelocation)'
+cat <<__CREATE_NIX_CRATE__
 	# Package with pkgid: \"\(.id)\"
 	# \(print_type)
 	\( .id | pkgid2recattr ) = mkRustCrate rec {
@@ -40,9 +43,12 @@ def print_package(print_type; $cfgmapping):
 	    version = \"\( .version )\";
 	    src = \(if .source == "registry+https://github.com/rust-lang/crates.io-index"
 	            then "fetchFromCratesIo {
-	      inherit name version;
-	      sha256 = \"$(${nix}/bin/nix-prefetch-url --type sha256 --unpack --name  '\(.name + "-" + .version + ".crate")' 'https://crates.io/api/v1/crates/\(.name)/\(.version)/download#crate.tar.gz' 2>/dev/null)\";
-	    };"
+                            inherit name version;
+                            $(if [[ $CHECKSUM ]]
+                              then
+                                echo \"sha256 = \\\"$CHECKSUM\\\";\"
+                              fi)
+                            };"
 	            elif .path != null
 		    then "\(.path);"
 		    else "\"Unsupported source: \(.source)\""
@@ -137,10 +143,74 @@ __CREATE_NIX_START_OF_A_CFG_EXPRESSION__\n";
 #
 # Start of emitting the Nix expression
 #
-| "cat <<__CREATE_NIX_START__
+
+#
+# START Shell functions
+# Some shell functions that is used in the bash pass
+#
+| "set -o errexit -o nounset -o pipefail
+
+get_crateurl()
+{
+  local source=\"$1\"
+  local name=\"$2\"
+  local version=\"$3\"
+  local cratelocation=\"$4\"
+  local crateurl=
+  local -n ref=CHECKSUM
+
+  ref=
+
+  if [[ $source != \"registry+https://github.com/rust-lang/crates.io-index\" ]]
+  then
+    return
+  fi
+
+  case $cratelocation in
+    remote)
+      crateurl=\"https://crates.io/api/v1/crates/''${name}/''${version}/download#crate.tar.gz\"
+      ;;
+
+    local)
+      local cratefile=~/.cargo/registry/cache/github.com-1ecc6299db9ec823/\"''${name}-''${version}.crate\"
+
+      if [[ ! -e $cratefile ]]
+      then
+        echo \"Local crate file ''${cratefile} does not exist\" >&2
+        return 1
+      fi
+
+      crateurl=\"file://''${cratefile}\"
+      ;;
+
+    none)
+      return
+      ;;
+
+    *)
+      echo \"Invalid cratelocation: $cratelocation\" >&2
+      return 2
+      ;;
+  esac
+
+  ref=$(${nix}/bin/nix-prefetch-url --type sha256 --unpack --name \"''${name}-''${version}.crate\" \"$crateurl\" 2>/dev/null)
+}
+",
+#
+# END Shell functions
+# Some shell functions that is used in the bash pass
+#
+
+#
+# START Nix expression start
+#
+"cat <<__CREATE_NIX_START__
 { pkgs ? import <nixpkgs> {} }:
   with pkgs;
 __CREATE_NIX_START__",
+#
+# END Nix expression start
+#
 
 #
 # Start of dependencies: Start a "let" expression
@@ -149,15 +219,18 @@ __CREATE_NIX_START__",
 
 # START OF DEPENDENCIES
   let
-	_cfg = (import rustcNixCfg);
-	_target = _cfg.target_arch
-		+ \"-\"
-		+ _cfg.target_vendor
-		+ \"-\"
-		+ _cfg.target_os
-		+ (if _cfg.target_env == \"\"
-			then \"\"
-			else (\"-\" + _cfg.target_env));
+        _cfg = (import rustcNixCfg);
+        _target = _cfg.target_arch
+                  + \"-\"
+                  + _cfg.target_vendor
+                  + \"-\"
+                  + _cfg.target_os
+                  + (if _cfg.target_env == \"\"
+                     then
+                       \"\"
+                     else
+                       (\"-\"
+                        + _cfg.target_env));
 
 __CREATE_NIX_START_OF_DEPENDENCIES__",
 
