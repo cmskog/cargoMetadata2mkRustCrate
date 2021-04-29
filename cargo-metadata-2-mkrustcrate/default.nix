@@ -18,12 +18,17 @@ DONT_USE_METADATA=
 declare -a INVALIDOPTS=()
 OUTPUT_DIRECTORY=.
 OUTPUT_DIRECTORY_MISSING=
+PRINT_HELP=
 
-while getopts :c:o:s ARGS
+while getopts :c:ho:s ARGS
 do
   case "$ARGS" in
     c)
       CRATE_LOCATION="$OPTARG"
+      ;;
+
+    h)
+      PRINT_HELP=y
       ;;
 
     o)
@@ -54,10 +59,15 @@ shift $(($OPTIND - 1))
 
 usage()
 {
-  ${coreutils}/bin/cat >&2 <<- END
-		$1
+  local errmsg=''${1:-}
+  local redir=''${errmsg:+">&2"}
+  local exitval=''${2:-0}
 
-		Usage: $0 [-c <cratelocation>] [-o <directory>] [-s]
+
+  eval ${coreutils}/bin/cat ''${redir} <<- END
+		''${errmsg:+''$errmsg
+
+		}Usage: $(basename $0) [-c <cratelocation>] [-h] [-o <directory>] [-s]
 
 		-c option: Point out crate source
 
@@ -75,6 +85,8 @@ usage()
 
 		'none' means do emit any sha256 checksums at all.
 
+		-h option: Print this info.
+
 		-o option: Set output directory, instead of using current directory.
 
 		-s option: Do not invoke "cargo metadata".
@@ -83,7 +95,7 @@ usage()
 		the nix expression. If this option is given, the "cargo metadata"
 		output is expected on stdin.
 		END
-  exit $2
+  exit $exitval
 }
 
 if [[ $CRATE_LOCATION_MISSING ]]
@@ -123,6 +135,11 @@ fi
 if [[ "$@" ]]
 then
   usage "Extraneous arguments: $*" 6
+fi
+
+if [[ $PRINT_HELP ]]
+then
+  usage
 fi
 
 PROJECT_NAME="$(basename "$(pwd)")"
