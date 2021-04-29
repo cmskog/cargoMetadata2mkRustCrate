@@ -145,7 +145,7 @@ process_json()
 
 if [[ $DONT_USE_METADATA ]]
 then
-  < process_json
+  process_json
 else
   ${cargo}/bin/cargo metadata --format-version 1 \
     \
