@@ -148,8 +148,8 @@ fi
 
 PROJECT_NAME="$(basename "$(pwd)")"
 LOG_DATE="$(${coreutils}/bin/date)"
-CARGO_METADATA_FILE="$OUTPUT_DIRECTORY/''${PROJECT_NAME}.''${LOG_DATE}.json"
-BASH_BEFORE_CHKSUMS="$OUTPUT_DIRECTORY/''${PROJECT_NAME}.''${LOG_DATE}.sh"
+CARGO_METADATA_DEBUG="$OUTPUT_DIRECTORY/''${PROJECT_NAME}.''${LOG_DATE}.json"
+BASH_SCRIPT_DEBUG="$OUTPUT_DIRECTORY/''${PROJECT_NAME}.''${LOG_DATE}.sh"
 NIX_EXPRESSION="$OUTPUT_DIRECTORY/''${PROJECT_NAME}.''${LOG_DATE}.nix"
 
 process_json()
@@ -161,7 +161,7 @@ process_json()
 
   if [[ $DEBUG ]]
   then
-    cmd+=" | ${coreutils}/bin/tee '$BASH_BEFORE_CHKSUMS'"
+    cmd+=" | ${coreutils}/bin/tee '$BASH_SCRIPT_DEBUG'"
   fi
 
   cmd+=" | ${bash}/bin/bash > '$NIX_EXPRESSION'"
@@ -177,7 +177,7 @@ else
 
   if [[ $DEBUG ]]
   then
-    CMD+=" | ${coreutils}/bin/tee '$CARGO_METADATA_FILE'"
+    CMD+=" | ${coreutils}/bin/tee '$CARGO_METADATA_DEBUG'"
   fi
 
   CMD+=" | process_json"
