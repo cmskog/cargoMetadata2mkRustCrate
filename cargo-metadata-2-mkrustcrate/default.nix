@@ -14,17 +14,22 @@ set \
 
 CRATE_LOCATION=remote
 CRATE_LOCATION_MISSING=
+DEBUG=
 DONT_USE_METADATA=
 declare -a INVALIDOPTS=()
 OUTPUT_DIRECTORY=.
 OUTPUT_DIRECTORY_MISSING=
 PRINT_HELP=
 
-while getopts :c:ho:s ARGS
+while getopts :c:dho:s ARGS
 do
   case "$ARGS" in
     c)
       CRATE_LOCATION="$OPTARG"
+      ;;
+
+    d)
+      DEBUG=y
       ;;
 
     h)
@@ -40,13 +45,13 @@ do
       ;;
 
     :)
-    if [[ $OPTARG == c ]]
-    then
-      CRATE_LOCATION_MISSING=1
-    elif [[ $OPTARG == o ]]
-    then
-      OUTPUT_DIRECTORY_MISSING=1
-    fi
+      if [[ $OPTARG == c ]]
+      then
+        CRATE_LOCATION_MISSING=1
+      elif [[ $OPTARG == o ]]
+      then
+        OUTPUT_DIRECTORY_MISSING=1
+      fi
       ;;
 
     *)
@@ -108,12 +113,11 @@ else
   case "$CRATE_LOCATION" in
     local)
       ;;
-
     none)
       ;;
-
     remote)
       ;;
+
 
     *)
       usage "Invalid cratelocation: '$CRATE_LOCATION'" 3
@@ -150,24 +154,34 @@ NIX_EXPRESSION="$OUTPUT_DIRECTORY/''${PROJECT_NAME}.''${LOG_DATE}.nix"
 
 process_json()
 {
-  ${jq}/bin/jq \
-    -f ${cargoMetadata2mkRustCrateJQ} \
-    -r \
-    --arg cratelocation "$CRATE_LOCATION" \
-    \
-  | ${coreutils}/bin/tee "$BASH_BEFORE_CHKSUMS" \
-    \
-  | ${bash}/bin/bash > "$NIX_EXPRESSION"
+  local cmd="${jq}/bin/jq \
+               -f ${cargoMetadata2mkRustCrateJQ} \
+               -r \
+               --arg cratelocation '$CRATE_LOCATION'"
+
+  if [[ $DEBUG ]]
+  then
+    cmd+=" | ${coreutils}/bin/tee '$BASH_BEFORE_CHKSUMS'"
+  fi
+
+  cmd+=" | ${bash}/bin/bash > '$NIX_EXPRESSION'"
+
+  eval "$cmd"
 }
 
 if [[ $DONT_USE_METADATA ]]
 then
   process_json
 else
-  ${cargo}/bin/cargo metadata --format-version 1 \
-    \
-  | ${coreutils}/bin/tee "$CARGO_METADATA_FILE" \
-    \
-  | process_json
+  CMD="${cargo}/bin/cargo metadata --format-version 1"
+
+  if [[ $DEBUG ]]
+  then
+    CMD+=" | ${coreutils}/bin/tee '$CARGO_METADATA_FILE'"
+  fi
+
+  CMD+=" | process_json"
+
+  eval "$CMD"
 fi
 ''
