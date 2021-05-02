@@ -55,7 +55,7 @@ do
       ;;
 
     *)
-      INVALIDOPTS[''${#INVALIDOPTS[@]}]=$OPTARG
+      INVALIDOPTS+=($OPTARG)
       ;;
   esac
 done
