@@ -27,15 +27,15 @@ However, the needed packages is not in nixpkgs yet, so you have to prepare an ov
 To use the rust in nixpkgs, save an overlay in some file(e.g. `overlay.nix`):
 ```
 import <nixpkgs> {
-	overlays = [
+  overlays = [
 
-	# mkRustCrate and friends
-	(import (builtins.fetchTarball https://github.com/cmskog/mkRustCrate/archive/master.tar.gz))
+    # mkRustCrate and friends
+    (import (builtins.fetchTarball https://github.com/cmskog/mkRustCrate/archive/master.tar.gz))
 
-	# cargoMetadata2mkRustCrate and friends(in particular rustcNixCfg that is referenced in Nix expressions created by cargoMetadata2mkRustCrate)
-	(import (builtins.fetchTarball https://github.com/cmskog/cargoMetadata2mkRustCrate/archive/master.tar.gz))
+    # cargoMetadata2mkRustCrate and friends(in particular rustcNixCfg that is referenced in Nix expressions created by cargoMetadata2mkRustCrate)
+    (import (builtins.fetchTarball https://github.com/cmskog/cargoMetadata2mkRustCrate/archive/master.tar.gz))
 
-      ];
+  ];
 }
 ```
 Then run `nix-build`:
@@ -49,40 +49,40 @@ E.g. you absolutely want to use the nightly of 2020-04-22:
 
 ```
 import <nixpkgs> {
-	overlays = [
+  overlays = [
 
-	# Import the Rust overlay from Mozilla's nixpkgs-mozilla repository
-	(import
-		(builtins.fetchTarball
-			https://github.com/mozilla/nixpkgs-mozilla/archive/efda5b357451dbb0431f983cca679ae3cd9b9829.tar.gz
-			+ "/rust-overlay.nix"
-		)
-	)
+    # Import the Rust overlay from Mozilla's nixpkgs-mozilla repository
+    (import
+      (builtins.fetchTarball
+        https://github.com/mozilla/nixpkgs-mozilla/archive/efda5b357451dbb0431f983cca679ae3cd9b9829.tar.gz
+        + "/rust-overlay.nix"
+      )
+    )
 
-	# Pick the Rust version you are interested in
-        (self: super:
-	        let
-		        rustChannel = super.rustChannelOf {
-			        date = "2020-04-22";
-				channel = "nightly";
-			};
-		in
-			{
-				cargo = rustChannel.rust;
-				rustc = rustChannel.rust;
+    # Pick the Rust version you are interested in
+    (self: super:
+      let
+        rustChannel = super.rustChannelOf {
+          date = "2020-04-22";
+          channel = "nightly";
+        };
+      in
+        {
+          cargo = rustChannel.rust;
+          rustc = rustChannel.rust;
 
-				# We should be able to just "inherit (rustChannel) rustc" here
-				#inherit (rustChannel) cargo rustc;
-			}
-	)
+          # We should be able to just "inherit (rustChannel) rustc" here
+          #inherit (rustChannel) cargo rustc;
+        }
+    )
 
-	# mkRustCrate and friends
-	(import (builtins.fetchTarball https://github.com/cmskog/mkRustCrate/archive/master.tar.gz))
+    # mkRustCrate and friends
+    (import (builtins.fetchTarball https://github.com/cmskog/mkRustCrate/archive/master.tar.gz))
 
-	# cargoMetadata2mkRustCrate and friends(in particular rustcNixCfg that is referenced in Nix expressions created by cargoMetadata2mkRustCrate)
-	(import (builtins.fetchTarball https://github.com/cmskog/cargoMetadata2mkRustCrate/archive/master.tar.gz))
+    # cargoMetadata2mkRustCrate and friends(in particular rustcNixCfg that is referenced in Nix expressions created by cargoMetadata2mkRustCrate)
+    (import (builtins.fetchTarball https://github.com/cmskog/cargoMetadata2mkRustCrate/archive/master.tar.gz))
 
-	];
+  ];
 }
 ```
 
