@@ -133,7 +133,7 @@ fi
 if [[ "''${INVALIDOPTS[@]}" ]]
 then
   IFS=,
-  usage "Invalid options: ''${INVALIDOPTS[*]}" 5
+  usage "Invalid option$([[ ''${#INVALIDOPTS[@]} -ge 2 ]] && echo s): ''${INVALIDOPTS[*]}" 5
 fi
 
 if [[ "$@" ]]
