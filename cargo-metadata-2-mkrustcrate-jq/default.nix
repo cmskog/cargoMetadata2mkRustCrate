@@ -54,7 +54,7 @@ cat <<__CREATE_NIX_CRATE__
                                 };"
                   elif .path != null
             then "\( .path );"
-            else "\"Unsupported source: \( .source )\""
+            else "\"Unsupported source: \( .source )\";"
             end)
           dependencies = [
           \( .dependencies | map_dependency($cfgmapping) )
