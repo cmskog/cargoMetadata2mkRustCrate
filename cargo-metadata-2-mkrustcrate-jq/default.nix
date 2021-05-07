@@ -46,7 +46,7 @@ cat <<__CREATE_NIX_CRATE__
           version = \"\( .version )\";
           src = \(if .source == "registry+https://github.com/rust-lang/crates.io-index"
                   then "fetchFromCratesIo {
-                                inherit name version;
+                                inherit name version cratelocation;
                                 $(if [[ $CHECKSUM ]]
                                   then
                                     echo \"sha256 = \\\"$CHECKSUM\\\";\"
@@ -217,7 +217,10 @@ get_crateurl()
 # START Nix expression start
 #
 "cat <<__CREATE_NIX_START__
-{ pkgs ? import <nixpkgs> {} }:
+{
+  pkgs ? import <nixpkgs> {},
+  cratelocation ? null
+}:
   with pkgs;
 __CREATE_NIX_START__",
 #
