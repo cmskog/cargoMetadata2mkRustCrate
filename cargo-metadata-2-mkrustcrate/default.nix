@@ -74,31 +74,31 @@ usage()
 
 		}Usage: $(basename $0) [-c <cratelocation>] [-h] [-o <directory>] [-s]
 
-		-c option: Point out crate source
+		  -c option: Point out crate source
 
-		where <cratelocation> is either remote(default), local or none;
+		    where <cratelocation> is either remote(default), local or none;
 
-		'remote' means use nix-prefetch-url to download the cargo crate
-		from crates.io, and fill in the sha256 checksum in the
-		fetchFromCratesIo expression;
+		    'remote' means use nix-prefetch-url to download the cargo crate
+		    from crates.io, and fill in the sha256 checksum in the
+		    fetchFromCratesIo expression;
 
-		'local' means use the crate cache in the directory
-		.cargo/registry/cache/github.com-1ecc6299db9ec823 under the users
-		home directory. Normally, this should be the case if the
-		"cargo metadata" output is uptodate regarding the tree of crates
-		in use for the crate.
+		    'local' means use the crate cache in the directory
+		    .cargo/registry/cache/github.com-1ecc6299db9ec823 under the users
+		    home directory. Normally, this should be the case if the
+		    "cargo metadata" output is uptodate regarding the tree of crates
+		    in use for the crate.
 
-		'none' means do emit any sha256 checksums at all.
+		    'none' means do emit any sha256 checksums at all.
 
-		-h option: Print this info.
+		  -h option: Print this info.
 
-		-o option: Set output directory, instead of using current directory.
+		  -o option: Set output directory, instead of using current directory.
 
-		-s option: Do not invoke "cargo metadata".
+		  -s option: Do not invoke "cargo metadata".
 
-		Normally "cargo metadata" is invoked, and it's output used to create
-		the nix expression. If this option is given, the "cargo metadata"
-		output is expected on stdin.
+		    Normally "cargo metadata" is invoked, and it's output used to create
+		    the nix expression. If this option is given, the "cargo metadata"
+		    output is expected on stdin.
 		END
   exit $exitval
 }
