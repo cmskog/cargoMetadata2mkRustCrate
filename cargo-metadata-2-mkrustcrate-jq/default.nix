@@ -34,7 +34,7 @@ def map_dependency($cfgmapping):
   | join("\n");
 
 def print_package(print_type; $cfgmapping):
-  "get_crateurl '\(.source)' '\(.name)' '\(.version)' '\($cratelocation)'
+  "get_crateurl '\(.source)' '\(.name)' '\(.version)' '\($checksumlocation)'
 cat <<__CREATE_NIX_CRATE__
   # Package with pkgid: \"\(.id)\"
   # \(print_type)
@@ -167,7 +167,7 @@ get_crateurl()
   local source=\"$1\"
   local name=\"$2\"
   local version=\"$3\"
-  local cratelocation=\"$4\"
+  local checksumlocation=\"$4\"
   local crateurl=
   local -n ref=CHECKSUM
 
@@ -178,7 +178,7 @@ get_crateurl()
     return
   fi
 
-  case $cratelocation in
+  case $checksumlocation in
     remote)
       crateurl=\"https://crates.io/api/v1/crates/''${name}/''${version}/download#crate.tar.gz\"
       ;;
@@ -200,7 +200,7 @@ get_crateurl()
       ;;
 
     *)
-      echo \"Invalid cratelocation: $cratelocation\" >&2
+      echo \"Invalid checksumlocation: $checksumlocation\" >&2
       return 2
       ;;
   esac
@@ -216,10 +216,19 @@ get_crateurl()
 #
 # START Nix expression start
 #
+# Check if $checksumlocation is none, i.e.
+# we have no checksums. Then it is no meaning loading crates
+# either remote or locally, since we have no checksums to check
+# them against.
 "cat <<__CREATE_NIX_START__
 {
   pkgs ? import <nixpkgs> {},
-  cratelocation ? null
+  cratelocation ? \( if $checksumlocation == "none"
+                     then
+                       "\"localcargosrc\""
+                     else
+                       "null"
+                     end)
 }:
   with pkgs;
 __CREATE_NIX_START__",

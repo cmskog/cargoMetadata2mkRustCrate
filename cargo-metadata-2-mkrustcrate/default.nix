@@ -12,8 +12,8 @@ set \
 -o nounset \
 -o pipefail
 
-CRATE_LOCATION=remote
-CRATE_LOCATION_MISSING=
+CHECKSUM_LOCATION=remote
+CHECKSUM_LOCATION_MISSING=
 DEBUG=
 DONT_USE_METADATA=
 declare -a INVALIDOPTS=()
@@ -25,7 +25,7 @@ while getopts :c:dho:s ARGS
 do
   case "$ARGS" in
     c)
-      CRATE_LOCATION="$OPTARG"
+      CHECKSUM_LOCATION="$OPTARG"
       ;;
 
     d)
@@ -47,7 +47,7 @@ do
     :)
       if [[ $OPTARG == c ]]
       then
-        CRATE_LOCATION_MISSING=1
+        CHECKSUM_LOCATION_MISSING=1
       elif [[ $OPTARG == o ]]
       then
         OUTPUT_DIRECTORY_MISSING=1
@@ -72,21 +72,22 @@ usage()
   eval ${coreutils}/bin/cat ''${redir} <<- END
 		''${errmsg:+''$errmsg
 
-		}Usage: $(basename $0) [-c <cratelocation>] [-h] [-o <directory>] [-s]
+		}Usage: $(basename $0) [-c <checksumlocation>] [-h] [-o <directory>] [-s]
 
-		  -c option: Point out crate source
+		  -c option: Point out the source for checksums for crates
 
-		    where <cratelocation> is either remote(default), local or none;
+		    where <checksumlocation> is either remote(default), local or none;
 
 		    'remote' means use nix-prefetch-url to download the cargo crate
 		    from crates.io, and fill in the sha256 checksum in the
-		    fetchFromCratesIo expression;
+		    fetchFromCratesIo expression. This is the most expensive operation,
+		    but should also be the most authoritative value;
 
 		    'local' means use the crate cache in the directory
 		    .cargo/registry/cache/github.com-1ecc6299db9ec823 under the users
-		    home directory. Normally, this should be the case if the
-		    "cargo metadata" output is uptodate regarding the tree of crates
-		    in use for the crate.
+		    home directory to determine the checksum for the crate. Normally,
+		    this should be up to date, since "cargo metadata" is input data for
+		    this program;
 
 		    'none' means do emit any sha256 checksums at all.
 
@@ -103,14 +104,14 @@ usage()
   exit $exitval
 }
 
-if [[ $CRATE_LOCATION_MISSING ]]
+if [[ $CHECKSUM_LOCATION_MISSING ]]
 then
-  usage "Crate location missing for option 'c'" 1
+  usage "Checksum location missing for option 'c'" 1
 elif [[ $OUTPUT_DIRECTORY_MISSING ]]
 then
   usage "Output directory missing for option 'o'" 2
 else
-  case "$CRATE_LOCATION" in
+  case "$CHECKSUM_LOCATION" in
     local)
       ;;
     none)
@@ -120,7 +121,7 @@ else
 
 
     *)
-      usage "Invalid cratelocation: '$CRATE_LOCATION'" 3
+      usage "Invalid checksum location: '$CHECKSUM_LOCATION'" 3
       ;;
   esac
 
@@ -148,16 +149,16 @@ fi
 
 PROJECT_NAME="$(basename "$(pwd)")"
 LOG_DATE="$(${coreutils}/bin/date)"
-CARGO_METADATA_DEBUG="$OUTPUT_DIRECTORY/''${PROJECT_NAME}.''${CRATE_LOCATION}.''${LOG_DATE}.json"
-BASH_SCRIPT_DEBUG="$OUTPUT_DIRECTORY/''${PROJECT_NAME}.''${CRATE_LOCATION}.''${LOG_DATE}.sh"
-NIX_EXPRESSION="$OUTPUT_DIRECTORY/''${PROJECT_NAME}.''${CRATE_LOCATION}.''${LOG_DATE}.nix"
+CARGO_METADATA_DEBUG="$OUTPUT_DIRECTORY/''${PROJECT_NAME}.''${CHECKSUM_LOCATION}.''${LOG_DATE}.json"
+BASH_SCRIPT_DEBUG="$OUTPUT_DIRECTORY/''${PROJECT_NAME}.''${CHECKSUM_LOCATION}.''${LOG_DATE}.sh"
+NIX_EXPRESSION="$OUTPUT_DIRECTORY/''${PROJECT_NAME}.''${CHECKSUM_LOCATION}.''${LOG_DATE}.nix"
 
 process_json()
 {
   local cmd="${jq}/bin/jq \
                -f ${cargoMetadata2mkRustCrateJQ} \
                -r \
-               --arg cratelocation '$CRATE_LOCATION'"
+               --arg checksumlocation '$CHECKSUM_LOCATION'"
 
   if [[ $DEBUG ]]
   then
